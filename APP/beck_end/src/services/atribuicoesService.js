@@ -1,9 +1,9 @@
 const supabase = require('../config/supabase');
 
-async function listAtribuicoes() {
+async function listAtribuicoes({ docenteId } = {}) {
 	if (!supabase) throw new Error('Supabase não configurado.');
 
-	const { data, error } = await supabase
+	let query = supabase
 		.from('turma_componentes_docentes')
 		.select(`
 			id,
@@ -15,6 +15,9 @@ async function listAtribuicoes() {
 			docentes(id, nome, registro)
 		`)
 		.order('id');
+	if (docenteId) query = query.eq('docente_id', docenteId);
+
+	const { data, error } = await query;
 
 	if (error) throw error;
 

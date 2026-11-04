@@ -111,7 +111,6 @@ A reserva deverá considerar:
 ---
 
 ## 🔧 Manutenção
-
 Responsável por:
 
 * Receber sugestões de manutenção;
@@ -125,6 +124,14 @@ Responsável por:
 * Registrar as etapas da manutenção;
 * Finalizar ocorrências;
 * Acompanhar SLA e indicadores.
+
+---
+
+## 🔑 Autenticação na implementação
+
+O acesso autenticado usa contas do Supabase Auth. O perfil autorizado (`docente`, `coordenador`, `secretaria` ou `manutencao`) deve ser definido em `app_metadata`, e as rotas da API validam o token e a permissão no backend. Contas docentes também precisam de `docente_id` para limitar as aulas e alocações ao cadastro correspondente. Não há senhas de demonstração no frontend nem cadastro público de usuários.
+
+O único fluxo público da API é o formulário de sugestão de manutenção, incluindo a consulta mínima de ambientes necessária para selecionar o local. Consulte [APP/beck_end/README.md](./APP/beck_end/README.md) para configurar as chaves do servidor, as origens CORS e os perfis.
 
 ---
 
@@ -447,6 +454,15 @@ Também poderão ser apresentados:
 * Percentual de sugestões convertidas em ocorrências;
 * Percentual de SLA cumprido;
 * Percentual de SLA excedido.
+
+### Indicadores implementados nesta versão
+
+A tela **Indicadores do SGA** apresenta duas métricas calculadas sobre os registros atuais:
+
+1. **Concentração de alocações:** (alocações do ambiente líder ÷ total de alocações) × 100. Indica a participação do ambiente com mais registros; não representa a ocupação de todos os horários disponíveis.
+2. **Conclusão de manutenção:** (solicitações com status “Finalizada” ÷ total de solicitações) × 100. Reflete o status atual das solicitações e não mede tempo de atendimento ou SLA.
+
+As fontes são `alocacoes_ambiente` e `sugestoes_manutencao`, respectivamente. Nesta versão, os cálculos usam o histórico completo, sem filtro por data: as alocações ainda não têm vigência temporal. As mudanças de status da manutenção são auditadas, mas ainda não há metas de SLA configuradas.
 
 ---
 

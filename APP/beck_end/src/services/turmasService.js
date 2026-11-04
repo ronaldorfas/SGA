@@ -1,33 +1,44 @@
 const supabase = require('../config/supabase');
 
-async function listTurmas() {
-	if (!supabase) throw new Error('Supabase não configurado.');
+function createListTurmas(database) {
+	return async function listTurmas({ docenteId } = {}) {
+		if (!database) throw new Error('Supabase não configurado.');
 
-	const { data, error } = await supabase
-		.from('turmas')
-		.select('id, codigo, nome, turno, cursos(id, nome, tipos_curso(id, nome)), turma_componentes_docentes(componentes_curriculares(nome))')
-		.order('id');
+		const assignmentRelation = docenteId
+			? 'turma_componentes_docentes!inner(docente_id, componentes_curriculares(nome))'
+			: 'turma_componentes_docentes(componentes_curriculares(nome))';
+		let query = database
+			.from('turmas')
+			.select(`id, codigo, nome, turno, cursos(id, nome, tipos_curso(id, nome)), ${assignmentRelation}`)
+			.order('id');
+		if (docenteId) query = query.eq('turma_componentes_docentes.docente_id', docenteId);
 
-	if (error) throw error;
+		const { data, error } = await query;
 
-	return (data || []).map((row) => ({
-		id: row.id,
-		codigo: row.codigo,
-		nome: row.nome || row.codigo,
-		curso: row.cursos?.nome || '',
-		cursoId: row.cursos?.id || '',
-		tipoCurso: row.cursos?.tipos_curso?.nome || '',
-		tipoCursoId: row.cursos?.tipos_curso?.id || '',
-		turno: row.turno,
-		materias: (row.turma_componentes_docentes || [])
-			.map((item) => item.componentes_curriculares?.nome)
-			.filter(Boolean)
-	}));
+		if (error) throw error;
+
+		return (data || []).map((row) => ({
+			id: row.id,
+			codigo: row.codigo,
+			nome: row.nome || row.codigo,
+			curso: row.cursos?.nome || '',
+			cursoId: row.cursos?.id || '',
+			tipoCurso: row.cursos?.tipos_curso?.nome || '',
+			tipoCursoId: row.cursos?.tipos_curso?.id || '',
+			turno: row.turno,
+			materias: (row.turma_componentes_docentes || [])
+				.map((item) => item.componentes_curriculares?.nome)
+				.filter(Boolean)
+		}));
+	};
 }
 
-async function createTurma({ codigo, nome, curso, turno, materias = [] }) {
+const listTurmas = createListTurmas(supabase);
+
+async function createTurma(input = {}) {
 	if (!supabase) throw new Error('Supabase não configurado.');
 
+	const { codigo, nome, curso, turno, materias = [] } = input && typeof input === 'object' ? input : {};
 	const cleanCodigo = String(codigo || '').trim();
 	const cleanNome = String(nome || '').trim();
 	const cleanCurso = String(curso || '').trim();
@@ -36,20 +47,43 @@ async function createTurma({ codigo, nome, curso, turno, materias = [] }) {
 	if (!cleanCodigo || !cleanNome || !cleanCurso || !cleanTurno) {
 		throw new Error('Código, nome, curso e turno são obrigatórios.');
 	}
+	if (!Array.isArray(materias)) {
+		throw new Error('Matérias deve ser uma lista.');
+	}
+
+	const materiasLimpa = materias
+		.map((materia) => String(materia || '').trim())
+		.filter(Boolean);
+	if (materiasLimpa.length > 5) {
+		throw new Error('Cadastre no máximo cinco matérias por turma.');
+	}
 
 	// 1. Busca ou cria o curso
-	let { data: courseData } = await supabase
+	let { data: courseData, error: courseLookupError } = await supabase
 		.from('cursos')
 		.select('id')
-		.ilike('nome', cleanCurso)
+		.eq('nome', cleanCurso)
 		.limit(1)
 		.maybeSingle();
+	if (courseLookupError) throw courseLookupError;
 
 	if (!courseData) {
-		const { data: tipo } = await supabase.from('tipos_curso').select('id').limit(1).maybeSingle();
+		const { data: tipos, error: typeError } = await supabase
+			.from('tipos_curso')
+			.select('id')
+			.order('id')
+			.limit(2);
+		if (typeError) throw typeError;
+		if (!tipos || tipos.length === 0) {
+			throw new Error('Importe ou cadastre um tipo de curso antes de criar uma turma.');
+		}
+		if (tipos.length > 1) {
+			throw new Error('O curso ainda não existe e há mais de um tipo de curso. Cadastre o curso no banco antes de criar a turma.');
+		}
+
 		const { data: newCourse, error: courseErr } = await supabase
 			.from('cursos')
-			.insert({ tipo_curso_id: tipo ? tipo.id : 1, nome: cleanCurso })
+			.insert({ tipo_curso_id: tipos[0].id, nome: cleanCurso })
 			.select('id')
 			.single();
 		if (courseErr) throw courseErr;
@@ -74,37 +108,37 @@ async function createTurma({ codigo, nome, curso, turno, materias = [] }) {
 
 	// 3. Vincula matérias
 	const materiasSalvas = [];
-	const listaMaterias = Array.isArray(materias) ? materias : [];
+	const listaMaterias = [...new Set(materiasLimpa.map((materia) => materia.toLocaleLowerCase('pt-BR')))]
+		.map((normalizedName) => materiasLimpa.find((materia) => materia.toLocaleLowerCase('pt-BR') === normalizedName));
 
 	for (const materiaName of listaMaterias) {
-		const nomeLimpo = String(materiaName || '').trim();
-		if (!nomeLimpo) continue;
-
-		let { data: componente } = await supabase
+		const nomeLimpo = materiaName;
+		let { data: componente, error: componentLookupError } = await supabase
 			.from('componentes_curriculares')
 			.select('id')
-			.ilike('nome', nomeLimpo)
+			.eq('nome', nomeLimpo)
 			.limit(1)
 			.maybeSingle();
+		if (componentLookupError) throw componentLookupError;
 
 		if (!componente) {
 			const sigla = nomeLimpo.slice(0, 6).toUpperCase();
-			const { data: novoComp } = await supabase
+			const { data: novoComp, error: componentError } = await supabase
 				.from('componentes_curriculares')
 				.insert({ sigla, nome: nomeLimpo })
 				.select('id')
 				.single();
+			if (componentError) throw componentError;
 			componente = novoComp;
 		}
 
-		if (componente) {
-			await supabase.from('turma_componentes_docentes').insert({
-				turma_id: novaTurma.id,
-				componente_id: componente.id,
-				carga_horaria: 20
-			});
-			materiasSalvas.push(nomeLimpo);
-		}
+		const { error: associationError } = await supabase.from('turma_componentes_docentes').insert({
+			turma_id: novaTurma.id,
+			componente_id: componente.id,
+			carga_horaria: 20
+		});
+		if (associationError) throw associationError;
+		materiasSalvas.push(nomeLimpo);
 	}
 
 	return {
@@ -118,6 +152,7 @@ async function createTurma({ codigo, nome, curso, turno, materias = [] }) {
 }
 
 module.exports = {
+	createListTurmas,
 	listTurmas,
 	createTurma
 };

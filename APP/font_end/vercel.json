@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm run build",
+  "buildCommand": "npm ci && CI=true GENERATE_SOURCEMAP=false npm run build",
   "outputDirectory": "build",
   "rewrites": [
     {

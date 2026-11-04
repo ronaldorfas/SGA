@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const manutencaoService = require('../services/manutencaoService');
+const { requireRole } = require('../middleware/auth');
 
-router.get('/', async (req, res, next) => {
+router.get('/', requireRole('coordenador', 'secretaria', 'manutencao'), async (req, res, next) => {
 	try {
 		const sugestoes = await manutencaoService.listSugestoes();
 		res.json(sugestoes);
@@ -11,24 +12,27 @@ router.get('/', async (req, res, next) => {
 	}
 });
 
-router.post('/', async (req, res) => {
+router.get('/:id/historico', requireRole('manutencao'), async (req, res, next) => {
 	try {
-		const novaSugestao = await manutencaoService.createSugestao(req.body);
-		res.status(201).json(novaSugestao);
+		const historico = await manutencaoService.listHistorico(req.params.id);
+		res.json(historico);
 	} catch (error) {
-		res.status(400).json({ erro: error.message || 'Não foi possível registrar a sugestão.' });
+		next(error);
 	}
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', requireRole('manutencao'), async (req, res, next) => {
 	try {
-		const atualizada = await manutencaoService.updateSugestaoStatus(req.params.id, req.body);
+		const atualizada = await manutencaoService.updateSugestaoStatus(req.params.id, req.body, {
+			responsavelId: req.authUser.id
+		});
 		if (!atualizada) {
 			return res.status(404).json({ erro: 'Sugestão não encontrada.' });
 		}
 		res.json(atualizada);
 	} catch (error) {
-		res.status(400).json({ erro: error.message || 'Não foi possível atualizar o status da sugestão.' });
+		if (error.statusCode) return res.status(error.statusCode).json({ erro: error.message });
+		return next(error);
 	}
 });
 

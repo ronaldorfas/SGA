@@ -31,7 +31,7 @@
 .routing-list-heading { align-items: flex-end; border-bottom: 2px solid var(--routing-ink); display: flex; justify-content: space-between; padding-bottom: 18px; }
 .routing-list-heading h2 { font-size: clamp(26px, 4vw, 42px); letter-spacing: -1.5px; margin: 10px 0 0; }
 .routing-live { color: #328263; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
-.routing-columns { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 28px; }
+.routing-columns { display: grid; gap: 18px; grid-template-columns: repeat(6, minmax(230px, 1fr)); margin-top: 28px; overflow-x: auto; padding-bottom: 12px; }
 .routing-column { background: #eaf0ed; border-top: 4px solid var(--routing-blue); min-width: 0; padding: 16px; }
 .routing-column:nth-child(2) { border-top-color: var(--routing-yellow); }
 .routing-column:nth-child(3) { border-top-color: #328263; }
@@ -52,6 +52,11 @@
 .routing-update-form textarea { resize: vertical; }
 .routing-update-form button { background: var(--routing-blue); border: 0; color: white; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; padding: 10px; }
 .routing-update-form button:disabled { cursor: wait; opacity: .65; }
+.routing-history-toggle { background: transparent; border: 1px solid var(--routing-line); color: var(--routing-blue); cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; margin-top: 12px; padding: 8px; width: 100%; }
+.routing-history { border-top: 1px solid var(--routing-line); font-size: 11px; list-style: none; margin: 12px 0 0; padding: 0; }
+.routing-history li { border-bottom: 1px solid var(--routing-line); display: grid; gap: 5px; padding: 10px 0; }
+.routing-history time, .routing-history span { color: var(--routing-muted); }
+.routing-history p { display: block; line-height: 1.5; margin: 0; }
 .empty-column { color: var(--routing-muted); font-size: 12px; padding: 18px 4px; text-align: center; }
 .routing-row-meta { display: flex; flex-direction: column; gap: 10px; }
 .routing-id { color: var(--routing-muted); }
@@ -63,5 +68,5 @@
 	.routing-total strong { font-size: 34px; }
 	.routing-list { margin-top: 42px; padding: 0 20px; }
 	.routing-list-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
-	.routing-columns { grid-template-columns: 1fr; }
+	.routing-columns { grid-template-columns: repeat(6, minmax(260px, 1fr)); }
 }

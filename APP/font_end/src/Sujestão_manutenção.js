@@ -19,7 +19,7 @@ function Sujestão_manutenção() {
 	useEffect(() => {
 		async function loadEnvironments() {
 			try {
-				const response = await apiFetch('/api/ambientes');
+				const response = await apiFetch('/api/public/ambientes');
 				const result = await response.json();
 				if (!response.ok) throw new Error(result.erro || 'Não foi possível carregar os ambientes.');
 				setEnvironments(result);

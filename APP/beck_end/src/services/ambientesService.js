@@ -16,6 +16,19 @@ async function listAmbientes() {
 	}));
 }
 
+async function listPublicAmbientes() {
+	if (!supabase) throw new Error('Supabase não configurado.');
+
+	const { data, error } = await supabase
+		.from('ambientes')
+		.select('id, codigo, nome')
+		.order('nome');
+
+	if (error) throw error;
+	return data || [];
+}
+
 module.exports = {
-	listAmbientes
+	listAmbientes,
+	listPublicAmbientes
 };

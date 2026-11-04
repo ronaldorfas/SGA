@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: APP/beck_end/package-lock.json
+      - name: Install dependencies
+        run: npm ci --prefix APP/beck_end
+      - name: Run backend tests
+        run: npm test --prefix APP/beck_end
+
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: APP/font_end/package-lock.json
+      - name: Install dependencies
+        run: npm ci --prefix APP/font_end
+      - name: Run React tests
+        run: npm test --prefix APP/font_end -- --watchAll=false
+        env:
+          CI: true
+      - name: Run indicator tests
+        run: npm run test:indicators --prefix APP/font_end
+      - name: Build frontend
+        run: npm run build --prefix APP/font_end
+        env:
+          CI: true

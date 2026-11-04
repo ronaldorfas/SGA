@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const docentesService = require('../services/docentesService');
+const { requireRole } = require('../middleware/auth');
 
-router.get('/', async (req, res, next) => {
+router.get('/', requireRole('coordenador', 'secretaria'), async (req, res, next) => {
 	try {
 		const docentes = await docentesService.listDocentes();
 		res.json(docentes);
@@ -11,7 +12,7 @@ router.get('/', async (req, res, next) => {
 	}
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireRole('coordenador', 'secretaria'), async (req, res) => {
 	try {
 		const novoDocente = await docentesService.createDocente(req.body);
 		res.status(201).json(novoDocente);

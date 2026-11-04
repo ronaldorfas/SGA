@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { clearAuthSession, getAuthSession } from './authSession';
 import './Relatorio.css';
 
 const reportOptions = [
-	{ value: 'ambientes', label: 'Relatório de ambientes', description: 'Consulte a utilização dos ambientes por aula, dia e horário.', path: '/relatorio-ambientes' },
-	{ value: 'turmas', label: 'Relatório de turmas', description: 'Visualize turmas cadastradas, cursos, turnos e matérias.', path: '/relatorio-turmas' },
-	{ value: 'atribuicoes', label: 'Relatório de atribuições', description: 'Filtre as aulas por professor, turma, ambiente, curso e tipo de curso.', path: '/relatorio-atribuicoes' },
-	{ value: 'banco-sugestoes', label: 'Relatório de manutenção', description: 'Consulte todas as sugestões de manutenção enviadas.', path: '/sugestao-manutencao/dashboard' },
-	{ value: 'alocacoes', label: 'Relatório de alocações', description: 'Confira a distribuição de ambientes por turma.', path: '/relatorio-alocacoes' },
+	{ value: 'ambientes', label: 'Relatório de ambientes', description: 'Consulte a utilização dos ambientes por aula, dia e horário.', path: '/relatorio-ambientes', profiles: ['coordenador', 'secretaria', 'manutencao'] },
+	{ value: 'turmas', label: 'Relatório de turmas', description: 'Visualize turmas cadastradas, cursos, turnos e matérias.', path: '/relatorio-turmas', profiles: ['coordenador', 'secretaria', 'docente'] },
+	{ value: 'atribuicoes', label: 'Relatório de atribuições', description: 'Filtre as aulas por professor, turma, ambiente, curso e tipo de curso.', path: '/relatorio-atribuicoes', profiles: ['coordenador', 'secretaria'] },
+	{ value: 'banco-sugestoes', label: 'Relatório de manutenção', description: 'Consulte todas as sugestões de manutenção enviadas.', path: '/sugestao-manutencao/dashboard', profiles: ['manutencao'] },
+	{ value: 'alocacoes', label: 'Relatório de alocações', description: 'Confira a distribuição de ambientes por turma.', path: '/relatorio-alocacoes', profiles: ['coordenador', 'secretaria', 'manutencao'] },
+	{ value: 'indicadores', label: 'Indicadores do SGA', description: 'Acompanhe a concentração de alocações e a conclusão das solicitações de manutenção.', path: '/indicadores', profiles: ['coordenador', 'secretaria', 'manutencao'] },
 ];
 
 const profileActions = [
@@ -36,10 +38,11 @@ const profileLabels = {
 
 function Relatorio() {
 	const navigate = useNavigate();
-	const location = useLocation();
-	const [selectedReport, setSelectedReport] = useState(reportOptions[0].value);
-	const currentReport = reportOptions.find((report) => report.value === selectedReport);
-	const perfil = location.state?.perfil || 'docente';
+	const session = getAuthSession();
+	const perfil = session.user.perfil;
+	const availableReports = reportOptions.filter((report) => report.profiles.includes(perfil));
+	const [selectedReport, setSelectedReport] = useState(availableReports[0]?.value || '');
+	const currentReport = availableReports.find((report) => report.value === selectedReport);
 	const visibleProfiles = profileActions.filter((group) => {
 		if (perfil === 'docente') return group.profile === 'Docente';
 		if (perfil === 'coordenador') return group.profile === 'Coordenador';
@@ -66,20 +69,22 @@ function Relatorio() {
 						</div>
 					))}
 				</nav>
-				<button className="reports-exit" type="button" onClick={() => navigate('/')}>Sair <span aria-hidden="true">↗</span></button>
+				<button className="reports-exit" type="button" onClick={() => { clearAuthSession(); navigate('/'); }}>Sair <span aria-hidden="true">↗</span></button>
 			</header>
 
 			<section className="reports-content" aria-labelledby="reports-title">
 				<section className="report-selector" aria-labelledby="selector-title">
 					<label htmlFor="report-type" id="selector-title">Tipo de relatório</label>
-					<select id="report-type" value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)}>
-						{reportOptions.map((report) => <option value={report.value} key={report.value}>{report.label}</option>)}
+					<select id="report-type" value={selectedReport} onChange={(event) => setSelectedReport(event.target.value)} disabled={availableReports.length === 0}>
+						{availableReports.map((report) => <option value={report.value} key={report.value}>{report.label}</option>)}
 					</select>
 					<div className="report-preview" aria-live="polite">
-						<p className="preview-label">RELATÓRIO SELECIONADO</p>
-						<h3>{currentReport.label}</h3>
-						<p>{currentReport.description}</p>
-						<button className="open-report" type="button" onClick={() => currentReport.path && navigate(currentReport.path)} disabled={!currentReport.path}>Abrir relatório <span aria-hidden="true">↗</span></button>
+						{currentReport ? <>
+							<p className="preview-label">RELATÓRIO SELECIONADO</p>
+							<h3>{currentReport.label}</h3>
+							<p>{currentReport.description}</p>
+							<button className="open-report" type="button" onClick={() => navigate(currentReport.path)}>Abrir relatório <span aria-hidden="true">↗</span></button>
+						</> : <p>Use as ações do seu perfil para acessar as funcionalidades disponíveis.</p>}
 					</div>
 				</section>
 			</section>

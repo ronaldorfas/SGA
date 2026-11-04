@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm --prefix font_end install && CI=false GENERATE_SOURCEMAP=false npm --prefix font_end run build",
+  "buildCommand": "npm ci --prefix font_end && CI=true GENERATE_SOURCEMAP=false npm --prefix font_end run build",
   "outputDirectory": "font_end/build",
   "rewrites": [
     {
